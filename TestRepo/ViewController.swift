@@ -9,18 +9,18 @@ import UIKit
 import RxSwift
 import RxCocoa
 
-class ViewController : UIViewController {
-    
+class ViewController: UIViewController {
+
     // MARK: - lazy load
     private lazy var collectionView = {
         let collectionView = UICollectionView(frame: UIScreen.main.bounds, collectionViewLayout: self.collectionViewLayout)
         collectionView.backgroundColor = .gray
         collectionView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "UICollectionViewCell")
-        collectionView.delegate = self
-        collectionView.dataSource = self
+        collectionView.rx.setDelegate(self)
+            .disposed(by: disposeBag)
         return collectionView
     }()
-    
+
     private lazy var collectionViewLayout = {
         let collectionViewLayout = CollectionViewWaterfallLayout()
         collectionViewLayout.columnCount = 2
@@ -29,46 +29,38 @@ class ViewController : UIViewController {
         collectionViewLayout.sectionInset = UIEdgeInsets(top: 8, left: 8, bottom: 0, right: 8)
         return collectionViewLayout
     }()
-    
 
-    
+
+
     // MARK: - override
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         configUI()
-        
-        // MARK: - crash
-//        collectionView.rx.contentOffset.bind { _ in
-//
-//        }.disposed(by: disposeBag)
+
+        Observable.just(Array(repeating: UIColor.red, count: 10))
+            .bind(to: collectionView.rx.items) { collectionView, row, item in
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "UICollectionViewCell", for: IndexPath(row: row, section: 0))
+                cell.backgroundColor = item
+                return cell
+            }
+            .disposed(by: disposeBag)
+        collectionView.rx.contentOffset.bind { _ in }
+            .disposed(by: disposeBag)
     }
-    
-    // MARK: - private
-    var disposeBag = DisposeBag()
-    func configUI() {
+
+    private var disposeBag = DisposeBag()
+    private func configUI() {
         view.addSubview(collectionView)
     }
-    
+
 
 }
 
 // MARK: - UICollectionViewDelegate
-extension ViewController: UICollectionViewDelegate, UICollectionViewDataSource, CollectionViewWaterfallLayoutDelegate {
-    
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 10
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: IndexPath) -> CGSize {
+extension ViewController: UICollectionViewDelegate { }
+
+extension RxCollectionViewDelegateProxy: CollectionViewWaterfallLayoutDelegate {
+    public func collectionView(_ collectionView: UICollectionView, layout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: IndexPath) -> CGSize {
         return CGSize(width: 100, height: 100)
     }
-
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "UICollectionViewCell", for: indexPath)
-        cell.backgroundColor = .red
-        return cell
-    }
-    
 }
